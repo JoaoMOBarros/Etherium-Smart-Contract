@@ -27,19 +27,46 @@ export const TransactionProvider = ({ children }) => {
     keyword: "",
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [transactions, setTransactions] = useState({});
 
   const handleChange = (e, name) => {
     setFormData((prevState) => ({ ...prevState, [name]: e.target.value }));
   };
 
+  const getAllTransactions = async () => {
+    try {
+      if (!ethereum) return alert("Please, download and install Metamask!");
+      const transactionsContract = createEthereumContract();
+      const availableTransactions =
+        await transactionsContract.getAllTransactions();
+
+      const structuredTransactions = availableTransactions.map(
+        (transaction) => ({
+          addressTo: transaction.receiver,
+          addressFrom: transaction.sender,
+          timestamp: new Date(
+            transaction.timestamp.toNumber() * 1000
+          ).toLocaleString(),
+          amount: parseInt(transaction.amount._hex) / 10 ** 18,
+          keyword: transaction.keyword,
+          message: transaction.message,
+        })
+      );
+      setTransactions(structuredTransactions);
+      console.log(structuredTransactions);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   const checkIfWalletIsConnected = async () => {
     try {
       if (!ethereum) return alert("Please, download and install Metamask!");
-      const account = await ethereum.request({ method: "eth_accounts" });
+      const accounts = await ethereum.request({ method: "eth_accounts" });
 
-      if (account.lenght) {
-        setCurrentAccount(account[0]);
-        //getAllTransactions;
+      if (accounts.length) {
+        setCurrentAccount(accounts[0]);
+        getAllTransactions();
       } else {
         console.log("No accounts found.");
       }
@@ -110,6 +137,7 @@ export const TransactionProvider = ({ children }) => {
         setFormData,
         sendTransaction,
         isLoading,
+        transactions,
       }}
     >
       {children}
